@@ -1,0 +1,361 @@
+
+<html>
+    <head>
+        <meta http-equiv="cache-control" content="no-cache" />
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="css/materialize.css">
+        <link rel="stylesheet" href="css/materialize.min.css">
+        <link rel="stylesheet" href="css/font-awesome.css">
+        <link rel="stylesheet" href="css/font-awesome.min.css">
+        <link rel="stylesheet" href="css/custom.css">
+        <script src="https://www.gstatic.com/firebasejs/3.0.0/firebase.js"></script>
+        <script src="js/jquery-3.2.0.min.js"></script>
+        <script src="js/materialize.js"></script>
+        <script src="js/materialize.min.js"></script>
+        <script src="js/md5.js"></script>
+    <title>ChatBox Media</title>
+    <style>
+        ul {
+        transform: rotate(180deg);
+    }
+    ul > li {
+        transform: rotate(-180deg);
+    }
+        ul li h6{
+            margin-left: 5px;
+        }
+        li{
+        border-radius: 25px;
+        border: 2px solid #73AD21;
+        padding: 20px; 
+        width: auto ;
+        height: auto ; 
+        }
+      h6 { font-size: 1.2rem;}
+      img { max-width: 200px;
+            max-height: 120px;
+            display: block;
+            }
+        delButton{
+            color: red;
+            display: inline-block;
+            align-self: right;
+        }
+            
+    img:active {
+        -webkit-transform: scale(2);
+        transform: scale(2);
+    }
+      @keyframes yellow-fade { 0% {background: #f2f2b8;} 100% {background: none;} }
+      .highlight { -webkit-animation: yellow-fade 2s ease-in 1; animation: yellow-fade 2s ease-in 1; }
+    </style>
+    <script>
+     $( document ).ready(function()  {
+         
+        $('.modal').modal();
+         $("img").addClass("materialboxed");
+         $('.chatBox').hide();
+         $('#msgNameBtn').click(function() { 
+                var username=null; //primary username
+                username=document.getElementById("msgName").value; //login inputs
+                password=document.getElementById("password").value;
+                password=password.toLowerCase();
+                var result = (MD5(password));// md5 generation
+                //md5 keys
+                if(result==compare){
+                       $('.chatBox').fadeIn(1000); //login box goes
+                       $('#loginBox').fadeOut(1000);// message box comes
+                       var date= new Date();
+                        if(date.getDate()==21 && date.getMonth()==5){
+                            window.alert(`Hey Baby!!! A small Update in the Media of Chatbox. Now our chatbox retrieves only last 10 photos.And a LoadMore button is added which loads 10 extra from past date on top of the list(screen) and so on..`);
+                        }
+                            //for message container hiding and visibility...
+                        document.getElementById('messagesContainerTrigger').style.color="white";               
+                        document.getElementById('messagesContainer').style.display = "none";
+    
+                        document.getElementById('username').innerText=username;
+                        // Step 0: HTML defined, variables for elements
+                        //work starts here
+                        var messagesList = document.getElementById('messages'),
+                            setUsernameButton=document.getElementById('msgNameBtn'),
+                            //usernameElm = document.getElementById('username'),
+                            password = document.getElementById('password'),
+                            //Load More Button
+                            loadMore=document.getElementById('loadMore');
+                            //KEYSTORE
+                            var FirstFileKey;
+                            var loadMoreTrigger=true;
+
+                        var config = {
+                            apiKey: "AIzaSyADFRhiooTKcWzRjjOmn-0sURrtuJeReh8",
+                            authDomain: "fir-chat-2a1fe.firebaseapp.com",
+                            databaseURL: "https://fir-chat-2a1fe.firebaseio.com",
+                            projectId: "fir-chat-2a1fe",
+                            storageBucket: "fir-chat-2a1fe.appspot.com",
+                            messagingSenderId: "668124991211"
+                        };
+                        var app = firebase.initializeApp(config),
+                            database = app.database(),
+                            auth = app.auth(),
+                            storage = app.storage();
+                            
+                        var databaseRef = database.ref().child('chat');
+                        var mediaDatabaseRef = database.ref().child('chat_media_DB');
+
+
+                        
+                        // Listen for when child nodes get added to the collection
+                        mediaDatabaseRef.limitToLast(10).on('child_added', function(snapshot) {
+                            // Get the chat message from the snapshot and add it to the UI
+                            var chat = snapshot.val(); //chat message data
+                            var chatKey = snapshot.key; // KEY OF MESSAGE FOR DELETION
+                            if(loadMoreTrigger==true)FirstFileKey=chatKey;
+                            loadMoreTrigger=false;
+                            addMessage(chat,chatKey); // PASSING TO LI ITEM CREATOR
+                            
+                        });
+                        loadMore.onclick=function() 
+                        {   
+                            loadMoreTrigger=true;
+                            mediaDatabaseRef.orderByKey().endAt("-LDw7Atb54H9Sv58n70x").limitToLast(10).on('child_added', function(snapshot) {
+                            // Get the chat message from the snapshot and add it to the UI
+                            var chat = snapshot.val(); //chat ,essage datA
+                            var chatKey = snapshot.key; // KEY OF MESSAGE FOR DELETION
+                            if(loadMoreTrigger==true)FirstFileKey=chatKey;
+                            loadMoreTrigger=false;
+                            addMessage(chat,chatKey); // PASSING TO LI ITEM CREATOR
+                            
+                        });
+                        }
+
+                        function handleFileSelect(e) {
+                            var file = e.target.files[0];
+                            // Get a reference to the location where we'll store our photos
+                            var storageRef = storage.ref().child('chat_photos');
+                            
+                            // Get a reference to store file at photos/<FILENAME>.jpg
+                            var photoRef = storageRef.child(file.name);
+                            //uploadTask.on('state_changed', null, null, function() {
+                        uploadTask.on('state_changed', 
+                        function(snapshot){
+                            $('#modal1').modal('open');
+                            // Observe state change events such as progress, pause, and resume
+                            // Get task progress, including the number of bytes uploaded and the total number of bytes to be uploaded
+                            //% counter NO NEED var progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            console.log('Upload Started');
+                            switch (snapshot.state) {
+                                case firebase.storage.TaskState.PAUSED: // or 'paused'
+                                console.log('Upload is paused');
+                                break;
+                                case firebase.storage.TaskState.RUNNING: // or 'running'
+                                console.log('Upload is running');
+                                break;
+                            }
+                        }, function(error) {
+                        // Handle unsuccessful uploads
+                        }, function() {
+                        // When the image has successfully uploaded, we get its download URL
+                            $('#modal1').modal('close');
+                            var downloadUrl = uploadTask.snapshot.downloadURL;
+                            // Set the download URL to the message box, so that the user can send it to the database
+                            //textInput.value = downloadUrl;
+                            // Set the download URL to the message box, so that the user can send it to the database
+                            //textInput.value = downloadUrl;
+                            // Directly posting the picture in chat box
+                            //dateObject
+                            //gets instancc e time for each msg
+                                        var dateObj = new Date(),
+                                        month = dateObj.getUTCMonth() + 1, //months from 1-12
+                                        day = dateObj.getUTCDate(),
+                                        year = dateObj.getUTCFullYear(),
+                                        hours =dateObj.getHours(),
+                                        minutes =dateObj.getMinutes();
+                                        if(hours<12){
+                                            minutes= minutes +" AM";
+                                            }
+                                        else{
+                                            hours=hours-12;
+                                            minutes=minutes+" PM";
+                                        }
+                                        // changing accrdng to needs
+                                        var d = year + "/" + month + "/" + day +" "+ hours + ":" + minutes;
+                                        //adding to db data
+                                        var chat = { name: "From: "+username +"\n"+ d , message: downloadUrl };
+                                        //pushing
+                                        databaseRef.push().set(chat);
+                                        mediaDatabaseRef.push().set(chat);
+                                        //reseting to empty field
+                                        textInput.value = '';
+    
+                            });
+                        }
+                        file.addEventListener('change', handleFileSelect, false);
+                        function addMessage(chat , chatKey) {
+                            //adding msg to ui by li items
+                            var li = document.createElement('li');
+                            var nameElm = document.createElement('h6');
+                            nameElm.innerText = chat.name;
+                            li.appendChild(nameElm);
+                            var delButton = document.createElement("button");
+                            delButton.innerHTML='<i class="fa fa-trash-o" aria-hidden="true"></i>';
+                            delButton.classList.add('btn-floating','right-align', 'red','waves-effect','waves-light');
+                            delButton.style.float="right";
+                            delButton.onclick= function() {
+                                // deletion magic goes here
+                                var deleteTrigger=false;
+                                //verifiyng the original msg rights
+                                if((/n/i.test(nameElm.innerText))&&(/n/i.test(document.getElementById('username').innerText))){
+                                 //   console.log(nameElm.innerText + " "+document.getElementById('username').innerText );
+                                    deleteTrigger=true;
+                                }// searching n containing username
+                                else if((/b/i.test(nameElm.innerText))&&(/b/i.test(document.getElementById('username').innerText))){
+                                 //   console.log(nameElm.innerText + " "+document.getElementById('username').innerText );
+                                    deleteTrigger=true;
+                                }// searching n containing username
+                                else{
+                                   // console.log(nameElm.innerText + " "+document.getElementById('username').innerText );
+                                    deleteTrigger=false;
+                                    alert("Thats not urs message to delete");
+                                } 
+                                //REF if(/n/i.test(username)){} searching n containing current username
+                                //REF if(/n/i.test(nameElm)){}  searching n containing message username
+                                //if rights are clear then deleting
+                                if(deleteTrigger){
+                                    //console.log(chatKey);
+                                    if(confirm("Are you sure about deleting")){
+                                    // removing the item by below line
+                                    mediaDatabaseRef.child(chatKey).remove();
+                                    //deleting done immediatly hiding the li 
+                                    //li.style.visibility="hidden";
+                                    //display="none" works fine by deleting the li space which was left by visibility prperty
+                                    li.style.display="none";
+                                    }
+                                }
+                            }
+                            //adding li components
+                            li.appendChild(delButton); 
+                            li.className = 'highlight';
+                            if ( chat.message.indexOf("https://firebasestorage.googleapis.com/") == 0
+                            || chat.message.indexOf("https://lh3.googleusercontent.com/") == 0
+                            || chat.message.indexOf("http://pbs.twimg.com/") == 0
+                            || chat.message.indexOf("data:image/") == 0) {
+                                //for photos / media adding
+                            var imgElm = document.createElement('img');
+                            imgElm.src = chat.message;
+                            li.appendChild(imgElm);
+                            }
+                            else {
+                            var messageElm = document.createElement("span");
+                            messageElm.innerText = chat.message;
+                            li.appendChild(messageElm);
+                            }
+                            messagesList.appendChild(li);
+                            li.scrollIntoView(false);
+                        }
+                                
+                
+                }
+                else{
+                    alert("Wrong Password");
+                    document.getElementById('password').value="";
+                    $("#msgNameBtn").focus();
+         
+                    
+                }                
+    
+                });//msgNameBtn id function ends here
+      });//jquery script ends here
+    </script>
+    </head>
+    <body>
+      <div class="row">
+          <div class="col s12 m6 offset-m3 l4 offset-l4">
+              <div id='loginBox' class=" hoverable valign card-panel" style="background:#f5f5f5;">
+                        <form action="" method="post" class="container-fluid ">
+                            <div class="section"></div>
+                            <center>
+                                <img src="chatbox.png" alt="logo" class="responsive-img circle">
+                                <hr>
+                                <h6>Media Gallery</h6>
+                                <hr>    
+                            </center>
+                            <div class="section"></div>
+                            <div class="row input-field ">
+                                <i class="fa fa-user prefix"></i>
+                                <input id="msgName" type="text" name="msgName" class="validate">
+                                <label for="msgName">Name</label>
+                            </div>
+                            <div class="row input-field ">
+                                <i class="fa fa-pencil prefix"></i>
+                                <input type="password" name="password" id="password" class="validate">
+                                <label for="password">Password</label>
+                            </div>
+                            
+                            <div class="row center">
+                                <input type="button" id="msgNameBtn" name="msgNameBtn" value="login" class="btn">
+                            </div>
+                        </form>
+                 </div>
+          </div>
+      </div>
+      
+     
+ <center> 
+    <div class="chatBox  blue lighten-4 container card-panel white row" id="chatBox" >
+        <h5 onclick="messagesContainerHandler()" id="messagesContainerTrigger">ChatBox</h5>
+        <h6>Meida Gallery</h6>
+        <div class="row card-panel" style="background:#f5f5f5;">
+            <h6>Upload Files/Pictues Here</h6>
+            <div class="row center">
+                    <div class="file-field input-field">
+                    <div class="btn">
+                        <span>Upload</span>
+                        <input type="file" id="file" name="file">
+                    </div>
+                    <div class="file-path-wrapper">
+                        <input class="file-path validate" type="text">
+                    </div>
+                    </div>
+                   <!--wait POPUP Modal Structure -->
+                   <div id="modal1" class="modal white-text">
+                        <div class="modal-content light-blue darken-2">
+                        <h4>Uploading</h4>
+                        <p>Wait!, the file is being uploaded </p>
+                        </div>
+                        <div class="modal-footer ">
+                        <a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat">Okey! I will.</a>
+                        </div>
+                    </div>
+            </div>
+            <div class="row">   
+              <span class="center"><span id='username' class="username"></span>(LoggedIn as)</span>&nbsp &nbsp <span><a target="_blank" href="index.html"><i class="fa fa-comments"></i>Chat</a><i class="fa fa-external-link"></i></span>
+            </div>
+            <div>
+                <button class="btn" id="loadMore">Load More 10</button>
+            </div>
+
+        </div>
+        <div id='messagesContainer'>   
+                <h5>Recent Messages appear first</h5>
+                <ul style="background:#f5f5f5;" id='messages' class="left-align collection"></ul>
+
+        </div>
+        
+        <script>
+            function messagesContainerHandler() {
+                //for message container visibity 
+               
+                if (document.getElementById('messagesContainer').style.display === "none") {
+                    document.getElementById('messagesContainerTrigger').style.color="black";
+                    document.getElementById('messagesContainer').style.display = "block";
+                } else {
+                    document.getElementById('messagesContainer').style.display = "none";
+                    document.getElementById('messagesContainerTrigger').style.color="white";
+                }
+            }
+            </script>
+  </div>
+  </center>
+    </body>
+    </html>
+    
